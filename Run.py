@@ -3,33 +3,37 @@ import os
 from textwrap import indent
 from PIL import ImageQt
 from PyQt5.QtWidgets import QMainWindow, QWidget, QMenuBar, QStatusBar, QApplication, QLabel, QPushButton, QRadioButton
-from PyQt5.QtWidgets import QListWidget, QListWidgetItem, QScrollArea, QStatusBar
+from PyQt5.QtWidgets import QListWidget, QListWidgetItem, QScrollArea, QStatusBar, QVBoxLayout
 from PyQt5 import QtGui
+from PyQt5.QtGui import QImage, QPixmap
 from PyQt5 import *
 from PyQt5 import uic
 
-list_images = []
-list_photos = []
-current_directory = 'images\\'
+list_Qimage = []
+list_Qpixmap = []
 colors = []
+current_directory = 'images\\'
+
 for i in range(12):
     colors.append((255, 255, 255))
 
 def load_images():
     images = os.listdir(current_directory)
     for image in images:
-        if image.endswith(".png") or image.endswith("jpg"):
-            list_images.append(os.path.join(current_directory, image))
-        photo = QtGui.QImage(image)
-        list_photos.append(photo)
-
+        image = os.path.join(current_directory, image)
+        list_Qimage.append(QImage(image))
+        list_Qpixmap.append(QPixmap(image))
+        print(image, ' has been loaded.')
+    
 class ColorPicker(QMainWindow):
     def __init__(self):
         super().__init__()
         uic.loadUi('ColorPicker.ui', self)
         
+        #region define widgets
+        self.verticalLayout = self.findChild(QVBoxLayout, 'verticalLayout')
+        assert isinstance(self.verticalLayout, QVBoxLayout)
 
-        # define widgets
         self.listWidget = self.findChild(QListWidget, 'listWidget')
         self.label = self.findChild(QLabel, 'label')
 
@@ -66,23 +70,13 @@ class ColorPicker(QMainWindow):
         self.radioButton_11 = self.findChild(QRadioButton, 'radioButton_11')
         self.radioButton_12 = self.findChild(QRadioButton, 'radioButton_12')
 
-
         assert isinstance(self.listWidget, QListWidget)
         assert isinstance(self.label, QLabel)
         assert isinstance(self.labelColor_1, QLabel)
         assert isinstance(self.radioButton, QRadioButton)
         assert isinstance(self.radioButton_2, QRadioButton)
-
-        self.statusbar.showMessage("Hellothere")
+        #endregion
         
-
-        # load objects
-        load_images()
-        self.populate_list()
-        self.label.setPixmap(QtGui.QPixmap(list_images[0]))
-
-        self.listWidget.currentItemChanged.connect(self.update_image)
-
         self.list_labelColor = [self.labelColor_1,
                             self.labelColor_2,
                             self.labelColor_3,
@@ -108,73 +102,63 @@ class ColorPicker(QMainWindow):
                                   self.radioButton_10,
                                   self.radioButton_11,
                                   self.radioButton_12] 
+         
+        self.max_width = app.primaryScreen().size().width() - 400
+        self.max_height = app.primaryScreen().size().height() - 50
+        self.current_image = None
 
-        self.update_display_colors()   
+        # linking
+        self.listWidget.itemClicked.connect(self.item_clicked_event)
+
+        #load_images()
+        self.populate_list()  
         self.showMaximized()
 
+    def item_clicked_event(self, item):
+
+        image = item.data(5)
+
+        if image.width() > self.max_width:
+            image = image.scaledToWidth(self.max_width)
+
+        if image.height() > self.max_height:
+            image = image.scaledToHeight(self.max_height)
+
+        self.current_image = image
+        self.label.setPixmap(QPixmap(image))
+
+    def populate_list(self):
+        images = os.listdir(current_directory)
+        for image in images:
+            path = os.path.join(current_directory, image)
+
+            icon = QtGui.QIcon()
+            icon.addPixmap(QPixmap(path),QtGui.QIcon.Normal, QtGui.QIcon.Off)
+
+            item = QListWidgetItem()
+            item.setData(0, QPixmap(path))
+            item.setData(5, QImage(path))
+            item.setIcon(icon)
+
+            self.listWidget.addItem(item)
 
     def mousePressEvent(self, QMouseEvent):
+
         x = QMouseEvent.x() - self.label.x()
-        y = QMouseEvent.y() - self.label.y()
+        y = QMouseEvent.y() - self.label.y()     
 
-        a = self.label.x()
-        c = self.label.y()
-        b = a + self.label.width()
-        d = self.label.height()
-        
-        if x<a or x>b or y<c or y>d: return
-
-        index = y * self.label.size().width() + x
-        image = ImageQt.fromqpixmap(self.label.pixmap())
-        image = image.resize((self.label.size().width(), self.label.size().height()))
-        image_data = image.getdata()
-        r, g, b = image_data[index]
+        color = self.current_image.pixelColor(x, y)
+        r, g, b, _ = color.getRgb()
 
         for index, radio in enumerate(self.list_radioButtons):
             if not radio.isChecked():continue
             colors[index] = r, g, b
-        
         self.update_display_colors()
-
 
     def update_display_colors(self):
         for index, object in enumerate(self.list_labelColor):
             r, g, b = colors[index]
             object.setStyleSheet('background-color: rgb({}, {}, {});'.format(r, g, b))
-
-    def update_image(self):
-        index = self.listWidget.currentRow()
-        image = QtGui.QPixmap(list_images[index])
-
-        if image.width() > self.label.width():
-            image = image.scaledToWidth(self.label.width())
-
-        elif image.height() > self.label.height():
-            image = image.scaledToHeight(self.label.height())
-
-        self.label.setPixmap(image)
-
-    def mouseMoveEvent(self, QMouseEvent) -> None:
-        x = QMouseEvent.x() - self.label.x()
-        y = QMouseEvent.y() - self.label.y()
-
-        a = self.label.x()
-        c = self.label.y()
-        b = a + self.label.width()
-        d = self.label.height()
-        
-        if x<a or x>b or y<c or y>d: return
-
-        self.statusbar.showMessage('triggered!')
-
-
-    def populate_list(self):
-        for image in list_images:
-            item = QListWidgetItem()
-            icon = QtGui.QIcon()
-            icon.addPixmap(QtGui.QPixmap(image),QtGui.QIcon.Normal, QtGui.QIcon.Off)
-            item.setIcon(icon)
-            self.listWidget.addItem(item)
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
