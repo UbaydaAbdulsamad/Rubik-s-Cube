@@ -32,13 +32,19 @@ class ColorPicker(QMainWindow):
         
         #region define widgets
         self.verticalLayout = self.findChild(QVBoxLayout, 'verticalLayout')
-        assert isinstance(self.verticalLayout, QVBoxLayout)
+        isinstance(self.verticalLayout, QVBoxLayout)
 
         self.listWidget = self.findChild(QListWidget, 'listWidget')
         self.label = self.findChild(QLabel, 'label')
 
         self.statusbar = self.findChild(QStatusBar, 'statusbar')
-        assert isinstance(self.statusbar, QStatusBar)
+        isinstance(self.statusbar, QStatusBar)
+
+        self.radioButton_RGB = self.findChild(QRadioButton, 'radioButton_RGB')
+        assert isinstance(self.radioButton_RGB, QRadioButton)
+
+        self.radioButton_HSI = self.findChild(QRadioButton, 'radioButton_HSL')
+        assert isinstance(self.radioButton_HSI, QRadioButton)
 
         self.labelColor_1 = self.findChild(QLabel, 'labelColor_1')
         self.labelColor_2 = self.findChild(QLabel, 'labelColor_2')
@@ -56,6 +62,15 @@ class ColorPicker(QMainWindow):
         self.labelColor_14 = self.findChild(QLabel, 'labelColor_14')
         self.labelColor_15 = self.findChild(QLabel, 'labelColor_15')
         self.labelColor_16 = self.findChild(QLabel, 'labelColor_16')
+    
+        self.label_red_hue = self.findChild(QLabel, 'label_red_hue')
+        assert isinstance(self.label_red_hue, QLabel)
+        self.label_green_saturation = self.findChild(QLabel, 'label_green_saturation')
+        self.label_blue_intensity = self.findChild(QLabel, 'label_blue_intensity')
+        self.label_red_value = self.findChild(QLabel, 'label_red_value')
+        assert isinstance(self.label_red_value, QLabel)
+        self.label_green_value = self.findChild(QLabel, 'label_green_value')
+        self.label_blue_value = self.findChild(QLabel, 'label_blue_value')
 
         self.radioButton = self.findChild(QRadioButton, 'radioButton')
         self.radioButton_2 = self.findChild(QRadioButton, 'radioButton_2')
@@ -106,13 +121,27 @@ class ColorPicker(QMainWindow):
         self.max_width = app.primaryScreen().size().width() - 400
         self.max_height = app.primaryScreen().size().height() - 50
         self.current_image = None
+        
 
         # linking
         self.listWidget.itemClicked.connect(self.item_clicked_event)
+        self.radioButton_RGB.pressed.connect(self.toggled_rgb)
+        self.radioButton_HSI.pressed.connect(self.toggled_hsi)
 
         #load_images()
         self.populate_list()  
         self.showMaximized()
+
+    def toggled_rgb(self):
+        self.label_red_hue.setText('Red:')
+        self.label_green_saturation.setText('Green:')
+        self.label_blue_intensity.setText('Blue:')
+
+    def toggled_hsi(self):
+        self.label_red_hue.setText('Hue:')
+        self.label_green_saturation.setText('Saturation:')
+        self.label_blue_intensity.setText('Intensity:')
+        
 
     def item_clicked_event(self, item):
 
@@ -153,7 +182,19 @@ class ColorPicker(QMainWindow):
         for index, radio in enumerate(self.list_radioButtons):
             if not radio.isChecked():continue
             colors[index] = r, g, b
+
         self.update_display_colors()
+
+        if self.radioButton_RGB.isChecked():
+            self.label_red_value.setText(str(r))
+            self.label_green_value.setText(str(g))
+            self.label_blue_value.setText(str(b))
+        
+        else:
+            self.label_red_value.setText(str(r))
+            self.label_green_value.setText(str(g))
+            self.label_blue_value.setText(str(b))
+
 
     def update_display_colors(self):
         for index, object in enumerate(self.list_labelColor):
